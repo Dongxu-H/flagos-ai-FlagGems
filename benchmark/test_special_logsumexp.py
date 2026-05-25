@@ -3,6 +3,7 @@ import torch
 
 from . import base, consts
 
+# Representative 2D reduction shapes for logsumexp benchmarking
 LOGSUMEXP_SHAPES = [
     (256, 256),
     (1024, 1024),
