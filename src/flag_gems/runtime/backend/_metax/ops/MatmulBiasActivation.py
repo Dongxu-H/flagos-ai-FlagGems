@@ -11,7 +11,6 @@ from flag_gems.utils import triton_lang_extension as tle
 logger = logging.getLogger("flag_gems." + __name__)
 
 
-# Block sizes for matmul
 BLOCK_SIZE_M = 32
 BLOCK_SIZE_N = 64
 BLOCK_SIZE_K = 32
@@ -19,7 +18,7 @@ BLOCK_SIZE_K = 32
 
 @libentry()
 @triton.jit
-def matmul_bias_activation_kernel(
+def MatmulBiasActivation_kernel(
     a_ptr,
     b_ptr,
     bias_ptr,
@@ -31,8 +30,8 @@ def matmul_bias_activation_kernel(
     stride_ak,
     stride_bk,
     stride_bn,
-    stride_im,
-    stride_in,
+    stride_bm,
+    stride_bias_n,
     stride_cm,
     stride_cn,
     BLOCK_SIZE_M: tl.constexpr,
@@ -69,67 +68,36 @@ def matmul_bias_activation_kernel(
     c_ptrs = c_ptr + stride_cm * offs_cm[:, None] + stride_cn * offs_cn[None, :]
     c_mask = (offs_cm[:, None] < M) & (offs_cn[None, :] < N)
 
-    # Load bias - bias is 1D of shape (N,), so we only index by column (offs_cn)
-    bias_ptrs = bias_ptr + offs_cn
-    bias = tl.load(bias_ptrs, mask=offs_cn < N, other=0.0)
+    bias_ptrs = bias_ptr + stride_bm * offs_cm[:, None] + stride_bias_n * offs_cn
+    bias = tl.load(bias_ptrs, mask=c_mask, other=0.0)
 
-    # Add bias (broadcast 1D bias to 2D)
     accumulator = accumulator + bias
-
-    # Apply ReLU activation: max(0, x)
     accumulator = tl.where(accumulator > 0, accumulator, 0.0)
 
     c = accumulator.to(bias.dtype)
     tl.store(c_ptrs, c, mask=c_mask)
 
 
-def matmul_bias_activation(input, weight, bias):
-    """
-    Fused matmul + bias + ReLU activation.
-
-    Args:
-        input: Input tensor of shape (..., K) or (M, K)
-        weight: Weight tensor of shape (N, K)
-        bias: Bias tensor of shape (N,)
-
-    Returns:
-        Output tensor of shape (..., N) or (M, N)
-    """
+def MatmulBiasActivation(input, weight, bias):
     logger.debug("GEMS_VENDOR MATMUL_BIAS_ACTIVATION")
 
-    # Handle broadcasting for input
-    if input.dim() == 1:
-        input = input.unsqueeze(0)
-        squeeze_output = True
-    elif input.dim() > 2:
-        original_shape = input.shape
-        input = input.view(-1, input.shape[-1])
-        squeeze_output = False
-    else:
-        squeeze_output = False
-
-    # Get dimensions
+    assert input.shape[1] == weight.shape[0], "Incompatible dimensions"
+    assert broadcastable_to(
+        bias.shape, (input.shape[0], weight.shape[1])
+    ), "Incompatible input shape"
     M, K = input.shape
-    N = weight.shape[0]
-
-    assert weight.shape == (N, K), "Incompatible dimensions"
-    assert broadcastable_to(bias.shape, (N,)), "Incompatible bias shape"
-
-    logger.debug(
-        "GEMS_VENDOR MATMUL_BIAS_ACTIVATION, [shape info]: M=%s, N=%s, K=%s", M, N, K
-    )
+    _, N = weight.shape
 
     input = input.contiguous()
-    weight = weight.t().contiguous()  # weight.T to make it (K, N)
     out = torch.empty((M, N), device=input.device, dtype=input.dtype)
-    bias = bias.contiguous()
+    bias = bias.broadcast_to(out.shape)
 
     grid = lambda META: (
         triton.cdiv(M, META["BLOCK_SIZE_M"]),
         triton.cdiv(N, META["BLOCK_SIZE_N"]),
     )
     with torch_device_fn.device(input.device):
-        matmul_bias_activation_kernel[grid](
+        MatmulBiasActivation_kernel[grid](
             input,
             weight,
             bias,
@@ -142,18 +110,11 @@ def matmul_bias_activation(input, weight, bias):
             weight.stride(0),
             weight.stride(1),
             bias.stride(0),
-            bias.stride(1) if bias.dim() > 1 else 0,
+            bias.stride(1),
             out.stride(0),
             out.stride(1),
             BLOCK_SIZE_M,
             BLOCK_SIZE_N,
             BLOCK_SIZE_K,
         )
-
-    # Reshape output if needed
-    if squeeze_output:
-        out = out.squeeze(0)
-    elif input.dim() > 2:
-        out = out.view(*original_shape[:-1], N)
-
     return out
