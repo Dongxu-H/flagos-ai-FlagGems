@@ -3545,7 +3545,7 @@ ops:
     kind:
       - BLAS
     stages:
-      - alpha: '5.1'
+      - alpha: '5.3'
   - id: linspace
     description: |
       Creates a one-dimensional tensor of size `steps` whose values are evenly spaced from `start` to `end`, inclusive.
