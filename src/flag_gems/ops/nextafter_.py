@@ -42,12 +42,8 @@ def nextafter_kernel(x, y):
     # Handle zero boundary: +0.0 and -0.0 cross the NaN gap in int32 space
     # +0.0 (int32 0) toward -inf => -0.0 (int32 0x80000000 = -2147483648)
     # -0.0 (int32 -2147483648) toward +inf => min pos subnormal (int32 1)
-    result_i32 = tl.where(
-        (x_i32 == 0) & ~toward_pos_inf, -2147483648, result_i32
-    )
-    result_i32 = tl.where(
-        (x_i32 == -2147483648) & toward_pos_inf, 1, result_i32
-    )
+    result_i32 = tl.where((x_i32 == 0) & ~toward_pos_inf, -2147483648, result_i32)
+    result_i32 = tl.where((x_i32 == -2147483648) & toward_pos_inf, 1, result_i32)
 
     result = result_i32.to(tl.float32, bitcast=True)
 
@@ -67,12 +63,8 @@ def nextafter_kernel_tensor_scalar(x, y):
     result_i32 = x_i32 + step
 
     # Handle zero boundary
-    result_i32 = tl.where(
-        (x_i32 == 0) & ~toward_pos_inf, -2147483648, result_i32
-    )
-    result_i32 = tl.where(
-        (x_i32 == -2147483648) & toward_pos_inf, 1, result_i32
-    )
+    result_i32 = tl.where((x_i32 == 0) & ~toward_pos_inf, -2147483648, result_i32)
+    result_i32 = tl.where((x_i32 == -2147483648) & toward_pos_inf, 1, result_i32)
 
     result = result_i32.to(tl.float32, bitcast=True)
     result = tl.where(x == y, y, result)
@@ -89,12 +81,8 @@ def nextafter_kernel_scalar_tensor(x, y):
     result_i32 = x_i32 + step
 
     # Handle zero boundary
-    result_i32 = tl.where(
-        (x_i32 == 0) & ~toward_pos_inf, -2147483648, result_i32
-    )
-    result_i32 = tl.where(
-        (x_i32 == -2147483648) & toward_pos_inf, 1, result_i32
-    )
+    result_i32 = tl.where((x_i32 == 0) & ~toward_pos_inf, -2147483648, result_i32)
+    result_i32 = tl.where((x_i32 == -2147483648) & toward_pos_inf, 1, result_i32)
 
     result = result_i32.to(tl.float32, bitcast=True)
     result = tl.where(x == y, y, result)
