@@ -149,7 +149,7 @@ def logsumexp_kernel_inner(
         tl.store(output_ptr + pid_m, o)
 
 
-def logsumexp(inp, dim, keepdim=False):
+def special_logsumexp(inp, dim, keepdim=False):
     """
     Computes log(sum(exp(x), dim=dim)) with numerical stability.
 
