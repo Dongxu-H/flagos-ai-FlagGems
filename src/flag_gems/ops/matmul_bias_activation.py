@@ -18,7 +18,7 @@ BLOCK_SIZE_K = 32
 
 @libentry()
 @triton.jit
-def MatmulBiasActivation_kernel(
+def matmul_bias_activation_kernel(
     a_ptr,
     b_ptr,
     i_ptr,
@@ -80,7 +80,7 @@ def MatmulBiasActivation_kernel(
     tl.store(c_ptrs, c, mask=c_mask)
 
 
-def MatmulBiasActivation(input, weight, bias):
+def matmul_bias_activation(input, weight, bias):
     """
     Fused matmul + bias + ReLU activation.
 
@@ -109,7 +109,7 @@ def MatmulBiasActivation(input, weight, bias):
         triton.cdiv(N, META["BLOCK_SIZE_N"]),
     )
     with torch_device_fn.device(input.device):
-        MatmulBiasActivation_kernel[grid](
+        matmul_bias_activation_kernel[grid](
             input,
             weight,
             bias,

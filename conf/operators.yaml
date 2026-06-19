@@ -4217,12 +4217,11 @@ ops:
       - Tensor
     stages:
       - stable: '2.1'
-  - id: MatmulBiasActivation
+  - id: matmul_bias_activation
     description: Fused matrix multiplication with bias addition and ReLU activation.
     for:
-      - MatmulBiasActivation
+      - matmul_bias_activation
     labels:
-      - aten
       - KernelGen
     kind:
       - BLAS

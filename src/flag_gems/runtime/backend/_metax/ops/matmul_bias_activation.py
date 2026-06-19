@@ -6,18 +6,19 @@ import triton.language as tl
 
 from flag_gems.runtime import torch_device_fn
 from flag_gems.utils import broadcastable_to, libentry
+from flag_gems.utils import triton_lang_extension as tle
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("flag_gems." + __name__)
 
 
-BLOCK_SIZE_M = 128
-BLOCK_SIZE_N = 128
+BLOCK_SIZE_M = 32
+BLOCK_SIZE_N = 64
 BLOCK_SIZE_K = 32
 
 
 @libentry()
 @triton.jit
-def MatmulBiasActivation_kernel(
+def matmul_bias_activation_kernel(
     a_ptr,
     b_ptr,
     bias_ptr,
@@ -37,8 +38,8 @@ def MatmulBiasActivation_kernel(
     BLOCK_SIZE_N: tl.constexpr,
     BLOCK_SIZE_K: tl.constexpr,
 ):
-    pid_m = tl.program_id(0)
-    pid_n = tl.program_id(1)
+    pid_m = tle.program_id(0)
+    pid_n = tle.program_id(1)
 
     offs_am = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
     offs_bn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
@@ -77,8 +78,8 @@ def MatmulBiasActivation_kernel(
     tl.store(c_ptrs, c, mask=c_mask)
 
 
-def MatmulBiasActivation(input, weight, bias):
-    logger.debug("ILUVATAR GEMS MATMUL_BIAS_ACTIVATION")
+def matmul_bias_activation(input, weight, bias):
+    logger.debug("GEMS_VENDOR MATMUL_BIAS_ACTIVATION")
 
     assert input.shape[1] == weight.shape[0], "Incompatible dimensions"
     assert broadcastable_to(
@@ -96,7 +97,7 @@ def MatmulBiasActivation(input, weight, bias):
         triton.cdiv(N, META["BLOCK_SIZE_N"]),
     )
     with torch_device_fn.device(input.device):
-        MatmulBiasActivation_kernel[grid](
+        matmul_bias_activation_kernel[grid](
             input,
             weight,
             bias,

@@ -14,12 +14,12 @@ MNK_SHAPES = [
 ]
 
 
-@pytest.mark.MatmulBiasActivation
+@pytest.mark.matmul_bias_activation
 @pytest.mark.parametrize("M, N, K", MNK_SHAPES)
 @pytest.mark.parametrize("dtype", utils.FLOAT_DTYPES)
-def test_MatmulBiasActivation(M, N, K, dtype):
+def test_matmul_bias_activation(M, N, K, dtype):
     if flag_gems.vendor_name == "tsingmicro" and dtype == torch.float32:
-        pytest.skip("Skipping fp32 MatmulBiasActivation test on tsingmicro platform")
+        pytest.skip("Skipping fp32 matmul_bias_activation test on tsingmicro platform")
 
     # Create input tensors
     input_tensor = torch.randn((M, K), dtype=dtype, device=flag_gems.device)
@@ -33,8 +33,8 @@ def test_MatmulBiasActivation(M, N, K, dtype):
 
     ref_out = torch.relu(torch.mm(ref_input, ref_weight) + ref_bias)
     with flag_gems.use_gems():
-        from flag_gems.ops.MatmulBiasActivation import MatmulBiasActivation
+        from flag_gems.ops.matmul_bias_activation import matmul_bias_activation
 
-        res_out = MatmulBiasActivation(input_tensor, weight, bias)
+        res_out = matmul_bias_activation(input_tensor, weight, bias)
 
     utils.gems_assert_close(res_out, ref_out, dtype, reduce_dim=K)
