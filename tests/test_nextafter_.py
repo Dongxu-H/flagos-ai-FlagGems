@@ -85,8 +85,9 @@ def test_nextafter_nan():
         imp_x.nextafter_(y)
         imp_nan_mask = torch.isnan(imp_x)
 
+    # Move imp mask to the same device as ref for torch.equal (ref may be on CPU in quick-cpu mode)
     assert torch.equal(
-        ref_nan_mask, imp_nan_mask
+        ref_nan_mask, imp_nan_mask.to(ref_nan_mask.device)
     ), f"NaN mask mismatch: ref_nan at {ref_nan_mask}, imp_nan at {imp_nan_mask}"
     # Non-NaN values should match
     non_nan_mask = ~ref_nan_mask
