@@ -52,3 +52,27 @@ def test_linalg_cholesky_upper(shape, dtype):
         res_out = torch.ops.aten.cholesky(A, upper=True)
 
     utils.gems_assert_close(res_out, ref_out, dtype)
+
+
+@pytest.mark.linalg_cholesky
+@pytest.mark.parametrize("shape", [(2, 4, 4), (3, 8, 8)])
+# Cholesky only supports float32/float64; fp16/bf16 not supported by PyTorch
+@pytest.mark.parametrize("dtype", [torch.float32])
+def test_linalg_cholesky_batch(shape, dtype):
+    # Create positive-definite matrices for batched input: A = B @ B^T + I
+    n = shape[-1]
+    B = torch.randn(shape, dtype=dtype, device=flag_gems.device)
+    A = (
+        B @ B.transpose(-2, -1)
+        + torch.eye(n, dtype=dtype, device=flag_gems.device) * 0.1
+    )
+
+    # For reference, convert to CPU and use torch.linalg.cholesky
+    ref_A = utils.to_reference(A)
+    ref_out = torch.linalg.cholesky(ref_A)
+
+    # For gems, use aten.cholesky with flag_gems
+    with flag_gems.use_gems():
+        res_out = torch.ops.aten.cholesky(A)
+
+    utils.gems_assert_close(res_out, ref_out, dtype)
