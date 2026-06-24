@@ -65,8 +65,8 @@ def test_special_logsumexp_large_values(dtype):
     # Shape (16, 64) provides enough reduction elements per row to stress
     # the kernel's max-shift numerical stability with large values.
     shape = (16, 64)
-    large_val = torch.tensor(1e10, dtype=dtype)
-    inp = torch.full(shape, large_val, device=flag_gems.device)
+    large_val = torch.tensor(1000.0, dtype=dtype)
+    inp = torch.full(shape, large_val, dtype=dtype, device=flag_gems.device)
     ref_inp = utils.to_reference(inp, True)
 
     ref_out = torch.special.logsumexp(ref_inp, dim=1)
@@ -83,8 +83,8 @@ def test_special_logsumexp_negative_large_values(dtype):
     # Shape (8, 32) with one positive per row verifies the max-shift
     # algorithm correctly picks the max and handles near-zero exp terms.
     shape = (8, 32)
-    # Most elements are near -inf, one positive element per row
-    inp = torch.full(shape, -1e10, dtype=dtype, device=flag_gems.device)
+    # Most elements are very negative, one positive element per row
+    inp = torch.full(shape, -1000.0, dtype=dtype, device=flag_gems.device)
     # Set one positive element per row to verify max-shift algorithm
     inp[:, 0] = 1.0
     ref_inp = utils.to_reference(inp, True)
@@ -138,8 +138,8 @@ def test_special_logsumexp_extreme_mixed(dtype):
     # numerical precision when logsumexp reduces across very wide ranges.
     shape = (8, 32)
     inp = torch.zeros(shape, dtype=dtype, device=flag_gems.device)
-    inp[:, 0] = 1e10  # Very large positive
-    inp[:, 1] = -1e10  # Very large negative
+    inp[:, 0] = 1000.0  # Very large positive (float16-safe)
+    inp[:, 1] = -1000.0  # Very large negative (float16-safe)
     ref_inp = utils.to_reference(inp, True)
 
     ref_out = torch.special.logsumexp(ref_inp, dim=1)
