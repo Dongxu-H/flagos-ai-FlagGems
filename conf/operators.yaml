@@ -6854,8 +6854,13 @@ ops:
       Applies the log of the softmax function along a given dimension.
     for:
       - special.log_softmax
+    labels:
+      - aten
+      - KernelGen
     kind:
       - Math
+    stages:
+      - alpha: '5.4'
   - id: special_logsumexp
     description: |
       Computes the natural logarithm of the sum of exponentials of each row
