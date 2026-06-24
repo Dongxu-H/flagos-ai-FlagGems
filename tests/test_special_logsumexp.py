@@ -37,3 +37,113 @@ def test_special_logsumexp_multi_dim(shape, dtype, dims, keepdim):
         res_out = torch.special.logsumexp(inp, dim=dims, keepdim=keepdim)
 
     utils.gems_assert_close(res_out, ref_out, dtype)
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.special_logsumexp
+@pytest.mark.parametrize("dtype", utils.FLOAT_DTYPES)
+def test_special_logsumexp_single_element(dtype):
+    """Single-element tensor: logsumexp(x) == x."""
+    inp = torch.randn((1,), dtype=dtype, device=flag_gems.device)
+    ref_inp = utils.to_reference(inp, True)
+
+    ref_out = torch.special.logsumexp(ref_inp, dim=0)
+    with flag_gems.use_gems():
+        res_out = torch.special.logsumexp(inp, dim=0)
+
+    utils.gems_assert_close(res_out, ref_out, dtype)
+
+
+@pytest.mark.special_logsumexp
+@pytest.mark.parametrize("dtype", utils.FLOAT_DTYPES)
+def test_special_logsumexp_large_values(dtype):
+    """Numerical stability with very large positive values."""
+    # Shape (16, 64) provides enough reduction elements per row to stress
+    # the kernel's max-shift numerical stability with large values.
+    shape = (16, 64)
+    large_val = torch.tensor(1e10, dtype=dtype)
+    inp = torch.full(shape, large_val, device=flag_gems.device)
+    ref_inp = utils.to_reference(inp, True)
+
+    ref_out = torch.special.logsumexp(ref_inp, dim=1)
+    with flag_gems.use_gems():
+        res_out = torch.special.logsumexp(inp, dim=1)
+
+    utils.gems_assert_close(res_out, ref_out, dtype)
+
+
+@pytest.mark.special_logsumexp
+@pytest.mark.parametrize("dtype", utils.FLOAT_DTYPES)
+def test_special_logsumexp_negative_large_values(dtype):
+    """Numerical stability with very large negative values mixed with ones."""
+    # Shape (8, 32) with one positive per row verifies the max-shift
+    # algorithm correctly picks the max and handles near-zero exp terms.
+    shape = (8, 32)
+    # Most elements are near -inf, one positive element per row
+    inp = torch.full(shape, -1e10, dtype=dtype, device=flag_gems.device)
+    # Set one positive element per row to verify max-shift algorithm
+    inp[:, 0] = 1.0
+    ref_inp = utils.to_reference(inp, True)
+
+    ref_out = torch.special.logsumexp(ref_inp, dim=1)
+    with flag_gems.use_gems():
+        res_out = torch.special.logsumexp(inp, dim=1)
+
+    utils.gems_assert_close(res_out, ref_out, dtype)
+
+
+@pytest.mark.special_logsumexp
+@pytest.mark.parametrize("dtype", utils.FLOAT_DTYPES)
+def test_special_logsumexp_all_negative_inf(dtype):
+    """Edge case: input tensor where all elements are -inf."""
+    # Shape (4, 16) ensures multi-row testing of the all-negative-inf
+    # corner case where log(sum(exp(-inf))) must return -inf per row.
+    shape = (4, 16)
+    inp = torch.full(shape, float("-inf"), dtype=dtype, device=flag_gems.device)
+    ref_inp = utils.to_reference(inp, True)
+
+    ref_out = torch.special.logsumexp(ref_inp, dim=1)
+    with flag_gems.use_gems():
+        res_out = torch.special.logsumexp(inp, dim=1)
+
+    utils.gems_assert_close(res_out, ref_out, dtype)
+
+
+@pytest.mark.special_logsumexp
+@pytest.mark.parametrize("dtype", utils.FLOAT_DTYPES)
+def test_special_logsumexp_zeros(dtype):
+    """Input of all zeros: logsumexp(zeros, dim) = log(N)."""
+    # Shape (4, 16) verifies that a uniform zero tensor produces
+    # log(N) per row, exercising a common numerical baseline.
+    shape = (4, 16)
+    inp = torch.zeros(shape, dtype=dtype, device=flag_gems.device)
+    ref_inp = utils.to_reference(inp, True)
+
+    ref_out = torch.special.logsumexp(ref_inp, dim=1)
+    with flag_gems.use_gems():
+        res_out = torch.special.logsumexp(inp, dim=1)
+
+    utils.gems_assert_close(res_out, ref_out, dtype)
+
+
+@pytest.mark.special_logsumexp
+@pytest.mark.parametrize("dtype", utils.FLOAT_DTYPES)
+def test_special_logsumexp_extreme_mixed(dtype):
+    """Mixed extreme values: large positives, large negatives, and zeros."""
+    # Shape (8, 32) with extreme positive/negative per row stresses
+    # numerical precision when logsumexp reduces across very wide ranges.
+    shape = (8, 32)
+    inp = torch.zeros(shape, dtype=dtype, device=flag_gems.device)
+    inp[:, 0] = 1e10  # Very large positive
+    inp[:, 1] = -1e10  # Very large negative
+    ref_inp = utils.to_reference(inp, True)
+
+    ref_out = torch.special.logsumexp(ref_inp, dim=1)
+    with flag_gems.use_gems():
+        res_out = torch.special.logsumexp(inp, dim=1)
+
+    utils.gems_assert_close(res_out, ref_out, dtype)
