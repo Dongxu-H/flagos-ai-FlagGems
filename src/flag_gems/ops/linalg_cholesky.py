@@ -119,15 +119,15 @@ def linalg_cholesky(A, upper=False):
     if len(shape) > 2:
         A_kernel = A_sym.reshape(-1, n, n)
         L_kernel = L.reshape(-1, n, n)
-        stride_a = A_kernel.stride(1)      # row stride within a matrix = n
+        stride_a = A_kernel.stride(1)  # row stride within a matrix = n
         stride_l = L_kernel.stride(1)
-        batch_stride = A_kernel.stride(0)   # stride between matrices = n * n
+        batch_stride = A_kernel.stride(0)  # stride between matrices = n * n
     else:
         A_kernel = A_sym
         L_kernel = L
         stride_a = A_sym.stride(0)
         stride_l = L.stride(0)
-        batch_stride = stride_a * n   # n * n; pid=0 so a_offset = 0
+        batch_stride = stride_a * n  # n * n; pid=0 so a_offset = 0
 
     grid = (batch_size,)
 
