@@ -191,5 +191,5 @@ def test_rnn_relu_large_hidden(hidden_size):
     out_gems = gems_rnn_relu(inp, hx, params, True, 1, 0.0, False, False, False)
 
     atol = 2e-3
-    torch.testing.assert_close(out_gems[0], ref[0], atol=atol, rtol=1e-3)
-    torch.testing.assert_close(out_gems[1], ref[1], atol=atol, rtol=1e-3)
+    utils.gems_assert_close(out_gems[0], ref[0], dtype, atol=atol)
+    utils.gems_assert_close(out_gems[1], ref[1], dtype, atol=atol)
