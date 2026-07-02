@@ -586,8 +586,6 @@ _FULL_CONFIG = (
     ("sort", sort),
     ("sort.stable", sort_stable),
     ("special.gammainc", special_gammainc),
-    ("special.gammainc.out", special_gammainc),
-    ("special.logsumexp", special_logsumexp),
     ("special.log_softmax", special_log_softmax),
     ("special_chebyshev_polynomial_v", special_chebyshev_polynomial_v),
     ("special_hermite_polynomial_h", special_hermite_polynomial_h),
@@ -595,6 +593,7 @@ _FULL_CONFIG = (
     ("special_i0e.out", special_i0e_out),
     ("special_i1", special_i1),
     ("special_i1.out", special_i1_out),
+    ("special_logsumexp", special_logsumexp),
     ("special_shifted_chebyshev_polynomial_u", special_shifted_chebyshev_polynomial_u),
     (
         "special_shifted_chebyshev_polynomial_u_",
